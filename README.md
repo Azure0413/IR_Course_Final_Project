@@ -2,3 +2,4 @@
 
 要去這裡下載model檔案
 https://drive.google.com/drive/folders/18O5LDo0gaXhbQolfhH320TDe5BeIiQtv
+並放到IRW
