@@ -99,9 +99,9 @@
         <h1>Information Retrieval System</h1>
         <nav>
           <ul>
-            <li><a href="#" onclick="removeQueryParameter()">Home</a></li>
-            <li><a href="#" onclick="removeQueryParameter()">WordCloud</a></li>
-            <li><a href="#">TFIDF</a></li>
+            <li><a href="{% url 'index_view' %}" onclick="removeQueryParameter()">Home</a></li>
+            <li><a href="#" onclick="removeQueryParameter()">Clip Model</a></li>
+            <li><a href="#">Word Embedding</a></li>
           </ul>
         </nav>
       </div>
@@ -177,7 +177,7 @@
                     <img src="{{ result.image_url }}" alt="Recipe Image" style="max-width: 300px; margin-right: 20px;" />
                     <!-- 文字內容 -->
                     <div>
-                        <a href="{% url 'file_analysis' result.id %}"
+                        <a href="{% url 'file_analysis_view' result.index %}"
                             style="font-weight: bolder; font-size: 1.25rem; color: rgb(92, 95, 251);"
                         >
                             {{ result.recipe_name }}
@@ -206,7 +206,7 @@
                     <img src="{{ result.image_url }}" alt="Recipe Image" style="width: 100%; height: auto;" />
                     <!-- 文字在下 -->
                     <div style="padding: 10px; text-align: left; width: 90%;">
-                        <a href="{% url 'file_analysis' result.id %}" style="font-weight: bold; font-size: 1.25rem; text-align: center;">{{ result.recipe_name }}</a>
+                        <a href="{% url 'file_analysis_view' result.index %}" style="font-weight: bold; font-size: 1.25rem; text-align: center;">{{ result.recipe_name }}</a>
                         <p style="margin: 5px 0;">Similarity: {{ result.similarity }}</p>
                         <pre style="white-space: pre-wrap; word-wrap: break-word; font-size: 0.9rem; color: #555;">
                             <strong>Recipe:</strong><br>{{ result.recipe_content }}

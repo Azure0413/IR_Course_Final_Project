@@ -47,7 +47,6 @@ def get_text_features(text_input, model, processor):
     return text_features
 
 # 提取圖片特徵
-# 提取圖片特徵
 def get_image_features(image_input, model, processor):
     if isinstance(image_input, str):  # If input is a file path
         image = Image.open(image_input).convert("RGB")
@@ -138,6 +137,7 @@ def index_view(request):
                 recipe_content = "Recipe not found."
 
             results.append({
+                "index": recipe_id,  # 傳遞索引值
                 "image_url": os.path.join(IMAGE_FOLDER, image_name),
                 "recipe_name": recipe_name,  # 新增菜名資訊
                 "recipe_content": recipe_content,
@@ -145,10 +145,6 @@ def index_view(request):
             })
 
     return render(request, "index.html", {"results": results, "query": query, "method": method})
-
-from django.shortcuts import render
-import os
-import re
 
 # Utility functions for statistics
 def count_sentences(text):
@@ -199,39 +195,39 @@ def calculate_statistics(text):
 
 # New file_analysis_view
 def file_analysis_view(request, recipe_id):
-    # Paths for recipe and image folders
+    # 從 index.txt 中獲取菜名
     index_file = os.path.join(XML_FOLDER, "index.txt")
-    recipe_file_path = os.path.join(RECIPE_FOLDER, f"{recipe_id}.txt")
-    image_file_path = os.path.join(IMAGE_FOLDER, f"{recipe_id}.jpg")
-
-    # Load recipe names from index.txt
-    recipe_names = {}
+    recipe_name = None
     with open(index_file, "r", encoding="utf-8") as f:
         for line in f:
             parts = line.strip().split(" ", 1)
-            if len(parts) == 2:
-                recipe_names[parts[0]] = parts[1]
+            if len(parts) == 2 and parts[0] == recipe_id:
+                recipe_name = parts[1]
+                break
 
-    # Fetch recipe name
-    recipe_name = recipe_names.get(recipe_id, "Unknown Recipe")
-
-    # Read recipe content
-    if os.path.exists(recipe_file_path):
-        with open(recipe_file_path, "r", encoding="utf-8") as f:
+    # 獲取食譜內容
+    recipe_file = os.path.join(RECIPE_FOLDER, f"{recipe_id}.txt")
+    if os.path.exists(recipe_file):
+        with open(recipe_file, "r", encoding="utf-8") as f:
             recipe_content = f.read()
     else:
-        recipe_content = "Recipe content not found."
+        recipe_content = "Recipe not found."
 
-    # Calculate statistics
-    statistics = calculate_statistics(recipe_content)
+    # 構造圖片的完整 URL
+    image_file = os.path.join(IMAGE_FOLDER, f"{recipe_id}.jpg")
+    if os.path.exists(image_file):
+        recipe_image = os.path.join("../../", image_file ) # Update this path based on your static file setup
+    else:
+        recipe_image = None  # Handle missing images gracefully
 
-    # Construct image URL
-    recipe_image = os.path.join(IMAGE_FOLDER, f"{recipe_id}.jpg") if os.path.exists(image_file_path) else None
+    recipe_statstic = calculate_statistics(recipe_content)
 
-    # Render the analysis page
+    # 返回渲染的頁面
     return render(request, "file_analysis.html", {
-        "recipe_name": recipe_name,
+        "recipe_name": recipe_name or "Unknown Recipe",
         "recipe_content": recipe_content,
-        "recipe_image": recipe_image,
-        "statistics": statistics,
+        "statistics": recipe_statstic,
+        "recipe_image": recipe_image,  # Add the image to the context
     })
+
+
