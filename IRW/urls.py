@@ -4,7 +4,7 @@ from django.urls import path
 from . import views
 urlpatterns = [
     path('', views.index_view, name='index_view'),
-    path('recipe/<str:recipe_id>/', views.file_analysis_view, name='file_analysis')
+    path('file_analysis/<str:recipe_id>/', views.file_analysis_view, name='file_analysis_view'),
     ]
 
 if settings.DEBUG:
