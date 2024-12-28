@@ -1,2 +1,3 @@
-/home/IR_Course_Final_Project/IRW/model/clip_finetuned_cpu
-/home/IR_Course_Final_Project/IRW/model/clip_finetuned_NEW
+# Ignore specific directories
+IRW/model/clip_finetuned_cpu
+IRW/model/clip_finetuned_NEW

@@ -1,10 +1,13 @@
 import os
 import torch
+import json
 from PIL import Image
 from transformers import CLIPProcessor, CLIPModel
+from sentence_transformers import SentenceTransformer
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 import re
+import torch.nn.functional as F
 from nltk.stem import PorterStemmer
 
 # 路徑配置
@@ -17,7 +20,7 @@ ps = PorterStemmer()
 def get_model_and_processor():
     # 在首次調用時加載模型
     if not hasattr(get_model_and_processor, "model") or not hasattr(get_model_and_processor, "processor"):
-        model_path = "D://Azure/課程/生醫資訊擷取/Final/Web/IRW/model/clip_finetuned_cpu"
+        model_path = "./IRW/model/clip_finetuned_cpu"
         get_model_and_processor.model = CLIPModel.from_pretrained(model_path)
         get_model_and_processor.processor = CLIPProcessor.from_pretrained(model_path)
         print("Model loaded!")
@@ -83,9 +86,40 @@ def load_index(index_path):
 
 index_data = load_index(os.path.join(XML_FOLDER, "index.txt"))
 
+# Text(SBERT)
+
+def get_topk_results(query,model,k):
+    ## open recipe embeddings
+    with open('./IRW/model/recipe_embeddings.json', "r", encoding="utf-8") as f:recipe_embeddings = json.load(f)
+    print("Embeddings Loaded")
+
+    topk = []
+    highest_similarity = -1
+    best_match_file = None
+
+    query_embedding = model.encode(query)
+    for filename, content_embedding in recipe_embeddings.items():
+        similarity = torch.nn.functional.cosine_similarity(torch.tensor(query_embedding),torch.tensor(content_embedding),dim=0).item()
+        # if similarity > highest_similarity:
+        #     highest_similarity = similarity
+        #     best_match_file = filename
+        #     print(best_match_file,similarity)
+        topk.append((filename, similarity))
+    topk_sorted = sorted(topk, key=lambda x: x[1], reverse=True)
+    name_to_index = {v: k for k, v in index_data.items()}
+    topk_with_indices = [(name_to_index[name]+'.jpg', score) for name, score in topk_sorted]
+
+    return topk_with_indices[:k]
+
+def recipe_name_to_index(target):
+    key = next((k for k, v in index_data.items() if v == target), None)
+    return key
+    
+
 def index_view(request):
     query = request.POST.get("q", "").strip()  # 使用 POST 方法取得 query
     method = request.POST.get("method", "1")  # 1: Text, 2: Image, 3: Text & Image
+    print(method)
 
     # 讀取 index.txt 檔案，將其轉為字典
     index_file = os.path.join(XML_FOLDER, "index.txt")
@@ -100,9 +134,9 @@ def index_view(request):
     if query or ("image" in request.FILES):  # 只有當有查詢或上傳圖片時才進行處理
         # 應用延遲加載模型
         model, processor = get_model_and_processor()
-
         # 預處理圖片嵌入特徵，只在需要的時候加載圖片
         image_embeddings, image_paths = preprocess_images(IMAGE_FOLDER, model, processor)
+        sbert_model = SentenceTransformer("multi-qa-mpnet-base-dot-v1")
 
         if method == "1" and query:  # Text
             text_features = get_text_features(query, model, processor)
@@ -119,11 +153,18 @@ def index_view(request):
             image_features = get_image_features(image, model, processor)
             fused_features = fuse_features(text_features, image_features)
             matched_results = match_features_to_images(fused_features, image_embeddings, image_paths)
+        elif method == '4' and query: # Text(Sentence Transformer)
+            print("Method 4")
+            sbert_model = SentenceTransformer("multi-qa-mpnet-base-dot-v1")
+            matched_results = get_topk_results(query,sbert_model,10)
+            print(matched_results)
+
         else:
             matched_results = []
 
         # 組織結果數據
         for image_name, similarity in matched_results:
+            print(image_name)
             # 獲取對應的菜名
             recipe_id = image_name.split(".")[0]
             recipe_name = recipe_names.get(recipe_id, "Unknown Recipe")
