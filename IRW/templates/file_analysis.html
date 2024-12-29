@@ -12,10 +12,7 @@
       rel="stylesheet"
     />
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
+
         .container {
             max-width: 80%;
             margin: 0 auto;
@@ -48,36 +45,8 @@
         .statistics ul li {
             margin: 5px 0;
         }
-        header {
-            position: fixed;
-            top: 0;
-            width: 100%;
-            background: white;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            padding: 10px 0;
-            z-index: 1000;
-        }
-        .header-container {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            width: 90%;
-            margin: 0 auto;
-        }
-        .logo {
-            max-height: 50px;
-            margin-right: 10px;
-        }
-        nav ul {
-            list-style: none;
-            display: flex;
-            gap: 20px;
-        }
-        nav ul li a {
-            text-decoration: none;
-            color: black;
-            font-weight: bold;
-        }
+
+
     </style>
 </head>
 <body>
@@ -96,7 +65,7 @@
     </header>
 
     <div class="container" style="margin-top: 120px;">
-        <h1>{{ recipe_name }}</h1>
+        <h2>{{ recipe_name }}</h2>
         <img src="{{ recipe_image }}" alt="Recipe Image">
         <p><strong>Recipe Content:</strong></p>
         <pre>{{ recipe_content }}</pre>

@@ -121,6 +121,7 @@ def index_view(request):
     method = request.POST.get("method", "1")  # 1: Text, 2: Image, 3: Text & Image
     print(method)
 
+
     # 讀取 index.txt 檔案，將其轉為字典
     index_file = os.path.join(XML_FOLDER, "index.txt")
     recipe_names = {}
@@ -132,11 +133,15 @@ def index_view(request):
 
     results = []
     if query or ("image" in request.FILES):  # 只有當有查詢或上傳圖片時才進行處理
-        # 應用延遲加載模型
-        model, processor = get_model_and_processor()
-        # 預處理圖片嵌入特徵，只在需要的時候加載圖片
-        image_embeddings, image_paths = preprocess_images(IMAGE_FOLDER, model, processor)
-        sbert_model = SentenceTransformer("multi-qa-mpnet-base-dot-v1")
+
+        if method == '4':
+            sbert_model = SentenceTransformer("multi-qa-mpnet-base-dot-v1")
+        else: 
+            # 應用延遲加載模型
+            model, processor = get_model_and_processor()
+            # 預處理圖片嵌入特徵，只在需要的時候加載圖片
+            image_embeddings, image_paths = preprocess_images(IMAGE_FOLDER, model, processor)
+        
 
         if method == "1" and query:  # Text
             text_features = get_text_features(query, model, processor)
@@ -154,10 +159,8 @@ def index_view(request):
             fused_features = fuse_features(text_features, image_features)
             matched_results = match_features_to_images(fused_features, image_embeddings, image_paths)
         elif method == '4' and query: # Text(Sentence Transformer)
-            print("Method 4")
             sbert_model = SentenceTransformer("multi-qa-mpnet-base-dot-v1")
             matched_results = get_topk_results(query,sbert_model,10)
-            print(matched_results)
 
         else:
             matched_results = []
@@ -182,7 +185,7 @@ def index_view(request):
                 "image_url": os.path.join(IMAGE_FOLDER, image_name),
                 "recipe_name": recipe_name,  # 新增菜名資訊
                 "recipe_content": recipe_content,
-                "similarity": similarity,
+                "similarity": round(similarity,3),
             })
 
     return render(request, "index.html", {"results": results, "query": query, "method": method})
@@ -262,6 +265,7 @@ def file_analysis_view(request, recipe_id):
         recipe_image = None  # Handle missing images gracefully
 
     recipe_statstic = calculate_statistics(recipe_content)
+
 
     # 返回渲染的頁面
     return render(request, "file_analysis.html", {
