@@ -100,10 +100,6 @@ def get_topk_results(query,model,k):
     query_embedding = model.encode(query)
     for filename, content_embedding in recipe_embeddings.items():
         similarity = torch.nn.functional.cosine_similarity(torch.tensor(query_embedding),torch.tensor(content_embedding),dim=0).item()
-        # if similarity > highest_similarity:
-        #     highest_similarity = similarity
-        #     best_match_file = filename
-        #     print(best_match_file,similarity)
         topk.append((filename, similarity))
     topk_sorted = sorted(topk, key=lambda x: x[1], reverse=True)
     name_to_index = {v: k for k, v in index_data.items()}

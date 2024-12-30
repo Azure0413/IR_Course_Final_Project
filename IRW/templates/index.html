@@ -209,6 +209,11 @@
         <input type="file" name="image" />
         <button type="submit">Search</button>
       </form>
+      <div id="loading" class="loading-overlay">
+        <div class="spinner"></div>
+        <p>Loading, please wait...</p>
+      </div>
+
     </div>
 
     <div style="margin: 20px 0;">
@@ -254,10 +259,7 @@
                 <img src="../static/img/recipe.png" alt="Default Recipe Image" style="width: 50%;" />
             </div>
 
-            <div id="loading" class="loading-overlay">
-              <div class="spinner"></div>
-              <p>Loading, please wait...</p>
-            </div>
+
 
         {% endif %}
     </div>
