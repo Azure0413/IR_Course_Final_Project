@@ -86,23 +86,27 @@ def load_index(index_path):
 
 index_data = load_index(os.path.join(XML_FOLDER, "index.txt"))
 
-# Text(SBERT)
-def get_topk_results(query,model,k):
-    ## open recipe embeddings
-    with open('./IRW/model/recipe_embeddings.json', "r", encoding="utf-8") as f:recipe_embeddings = json.load(f)
-    print("Embeddings Loaded")
+# SBERT
+def get_topk_results(method,query,model,k):
+    print(method)
+    if method == 'recipe':
+        embeddings_path = './IRW/model/recipe_embeddings.json'
+    elif method == 'ingredient':
+        embeddings_path = './IRW/model/ingredient_embeddings.json'
+    print(f"{method} embeddings loaded")
 
+    with open(embeddings_path, "r", encoding="utf-8") as f:embeddings = json.load(f)
     topk = []
-    highest_similarity = -1
-    best_match_file = None
-
     query_embedding = model.encode(query)
-    for filename, content_embedding in recipe_embeddings.items():
+    for filename, content_embedding in embeddings.items():
         similarity = torch.nn.functional.cosine_similarity(torch.tensor(query_embedding),torch.tensor(content_embedding),dim=0).item()
         topk.append((filename, similarity))
     topk_sorted = sorted(topk, key=lambda x: x[1], reverse=True)
-    name_to_index = {v: k for k, v in index_data.items()}
-    topk_with_indices = [(name_to_index[name]+'.jpg', score) for name, score in topk_sorted]
+    print(topk_sorted[:10])
+
+    name_to_index = {v: k for k, v in index_data.items()}  
+    topk_with_indices = [(name_to_index[name] + '.jpg' if method == 'recipe' else name + '.jpg', score)
+                            for name, score in topk_sorted]
 
     return topk_with_indices[:k]
 
@@ -210,8 +214,8 @@ def index_view(request):
 
     results = []
     if query or ("image" in request.FILES):  # 只有當有查詢或上傳圖片時才進行處理
-
-        if method == '4':
+        print(f'method {method}')
+        if method == '4' or '6':
             sbert_model = SentenceTransformer("multi-qa-mpnet-base-dot-v1")
         else: 
             # 應用延遲加載模型
@@ -234,9 +238,8 @@ def index_view(request):
             image_features = get_image_features(image, model, processor)
             fused_features = fuse_features(text_features, image_features)
             matched_results = match_features_to_images(fused_features, image_embeddings, image_paths)
-        elif method == '4' and query: # Text(Sentence Transformer)
-            sbert_model = SentenceTransformer("multi-qa-mpnet-base-dot-v1")
-            matched_results = get_topk_results(query, sbert_model, 10)
+        elif method == '4' and query: # SBERT (Recipe)
+            matched_results = get_topk_results("recipe",query, sbert_model, 10)
         elif method == "5" and query and "image" in request.FILES:  # LLM + BLIP + CLIP
             uploaded_image = request.FILES["image"]
             image_caption = generate_caption(uploaded_image)
@@ -246,13 +249,19 @@ def index_view(request):
             print(f"Refined Query: {refined_query}")
             text_features = get_text_features(refined_query, model, processor)
             matched_results = match_features_to_images(text_features, image_embeddings, image_paths)
+        elif method == '6' and query: # SBERT (Ingredients)
+            matched_results = get_topk_results("ingredient",query, sbert_model, 10)
         else:
             matched_results = []
 
         for image_name, similarity in matched_results:
             recipe_id = image_name.split(".")[0]
             recipe_name = recipe_names.get(recipe_id, "Unknown Recipe")
+            if method == '6': 
+                recipe_name = image_name[:-4]
+            print(recipe_name)
             recipe_file = os.path.join(RECIPE_FOLDER, f"{recipe_id}.txt")
+
             if os.path.exists(recipe_file):
                 with open(recipe_file, "r", encoding="utf-8") as f:
                     recipe_content = f.read()
@@ -261,7 +270,7 @@ def index_view(request):
 
             results.append({
                 "index": recipe_id,  # 傳遞索引值
-                "image_url": os.path.join(IMAGE_FOLDER, image_name),
+                "image_url": os.path.join(IMAGE_FOLDER if method != '6' else os.path.join(XML_FOLDER, "Ingredients"), image_name),
                 "recipe_name": recipe_name,  # 新增菜名資訊
                 "recipe_content": recipe_content,
                 "similarity": round(similarity, 3),
