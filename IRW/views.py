@@ -9,6 +9,8 @@ from django.http import JsonResponse
 import re
 import torch.nn.functional as F
 from nltk.stem import PorterStemmer
+from torchvision.models import resnet50
+import torchvision.transforms as transforms
 
 # 路徑配置
 XML_FOLDER = "./xml_folder"
@@ -88,31 +90,46 @@ index_data = load_index(os.path.join(XML_FOLDER, "index.txt"))
 
 # SBERT
 def get_topk_results(method,query,model,k):
-    print(method)
-    if method == 'recipe':
+    # encode query
+
+    if method == '4':
         embeddings_path = './IRW/model/recipe_embeddings.json'
-    elif method == 'ingredient':
+        query_embedding = model.encode(query) # text
+    elif method == '6':
         embeddings_path = './IRW/model/ingredient_embeddings.json'
-    print(f"{method} embeddings loaded")
+        query_embedding = model.encode(query) # text
+    elif method == '7':
+        embeddings_path = './IRW/model/ingredient_img_embeddings.json'
+        query = transform(query).unsqueeze(0)
+        with torch.no_grad():
+            query_embedding = model(query).squeeze() # image tensor
+            query_embedding = query_embedding.flatten()
 
     with open(embeddings_path, "r", encoding="utf-8") as f:embeddings = json.load(f)
     topk = []
-    query_embedding = model.encode(query)
     for filename, content_embedding in embeddings.items():
         similarity = torch.nn.functional.cosine_similarity(torch.tensor(query_embedding),torch.tensor(content_embedding),dim=0).item()
         topk.append((filename, similarity))
     topk_sorted = sorted(topk, key=lambda x: x[1], reverse=True)
-    print(topk_sorted[:10])
+    
 
     name_to_index = {v: k for k, v in index_data.items()}  
-    topk_with_indices = [(name_to_index[name] + '.jpg' if method == 'recipe' else name + '.jpg', score)
+    topk_with_indices = [(name_to_index[name] + '.jpg' if method == '4' else name + '.jpg', score)
                             for name, score in topk_sorted]
-
+    print(topk_with_indices[:k])
     return topk_with_indices[:k]
 
 def recipe_name_to_index(target):
     key = next((k for k, v in index_data.items() if v == target), None)
     return key
+
+# Resnet
+# Preprocessing Pipeline
+transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+])
 
 blip_processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
 blip_model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base").to("cuda" if torch.cuda.is_available() else "cpu")
@@ -215,8 +232,12 @@ def index_view(request):
     results = []
     if query or ("image" in request.FILES):  # 只有當有查詢或上傳圖片時才進行處理
         print(f'method {method}')
-        if method == '4' or '6':
-            sbert_model = SentenceTransformer("multi-qa-mpnet-base-dot-v1")
+        if method == '4' or method == '6':
+            model = SentenceTransformer("multi-qa-mpnet-base-dot-v1")
+        elif method == '7':
+            model = resnet50(pretrained=True)
+            model.eval() 
+            model = torch.nn.Sequential(*list(model.children())[:-1])
         else: 
             # 應用延遲加載模型
             model, processor = get_model_and_processor()
@@ -239,7 +260,7 @@ def index_view(request):
             fused_features = fuse_features(text_features, image_features)
             matched_results = match_features_to_images(fused_features, image_embeddings, image_paths)
         elif method == '4' and query: # SBERT (Recipe)
-            matched_results = get_topk_results("recipe",query, sbert_model, 10)
+            matched_results = get_topk_results(method,query, model, 10)
         elif method == "5" and query and "image" in request.FILES:  # LLM + BLIP + CLIP
             uploaded_image = request.FILES["image"]
             image_caption = generate_caption(uploaded_image)
@@ -250,16 +271,22 @@ def index_view(request):
             text_features = get_text_features(refined_query, model, processor)
             matched_results = match_features_to_images(text_features, image_embeddings, image_paths)
         elif method == '6' and query: # SBERT (Ingredients)
-            matched_results = get_topk_results("ingredient",query, sbert_model, 10)
+            matched_results = get_topk_results(method,query, model, 10)
+        elif method == '7' and "image" in request.FILES: # Resnet (Ingredients)
+            uploaded_image = request.FILES["image"]
+            image = Image.open(uploaded_image).convert("RGB")
+            matched_results = get_topk_results(method,image, model, 10)
         else:
             matched_results = []
 
         for image_name, similarity in matched_results:
             recipe_id = image_name.split(".")[0]
             recipe_name = recipe_names.get(recipe_id, "Unknown Recipe")
-            if method == '6': 
+            if method == '6' or method == '7': 
                 recipe_name = image_name[:-4]
+                IMAGE_FOLDER = os.path.join(XML_FOLDER, "Ingredients")
             print(recipe_name)
+            print(IMAGE_FOLDER)
             recipe_file = os.path.join(RECIPE_FOLDER, f"{recipe_id}.txt")
 
             if os.path.exists(recipe_file):
@@ -270,7 +297,7 @@ def index_view(request):
 
             results.append({
                 "index": recipe_id,  # 傳遞索引值
-                "image_url": os.path.join(IMAGE_FOLDER if method != '6' else os.path.join(XML_FOLDER, "Ingredients"), image_name),
+                "image_url": os.path.join(IMAGE_FOLDER, image_name),
                 "recipe_name": recipe_name,  # 新增菜名資訊
                 "recipe_content": recipe_content,
                 "similarity": round(similarity, 3),
