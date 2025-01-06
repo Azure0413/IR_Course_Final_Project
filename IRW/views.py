@@ -192,7 +192,7 @@ def refine_query_with_llm(query_text, image_caption):
         # f"I have an ingredient '{query_text}'. "
         # f"And I have the other ingredient '{image_caption}'. "
         # f"I want to eat something with {query_text} and {image_caption}."
-        "I willput my image content beginning with 'Image Content:'. The instruction I provide will begin with 'Instruction:'. The edited description you generate should begin with 'Edited Description:'. You just generate one edited description only beginning with 'Edited Description:'. The edited description needs to be as simple as possible. Just one line."
+        "I will put my image content beginning with 'Image Content:'. The instruction I provide will begin with 'Instruction:'. The edited description you generate should begin with 'Edited Description:'. You just generate one edited description only beginning with 'Edited Description:'. The edited description needs to be as simple as possible. Just one line."
         "An example: Image Content: sliced pizza with cheese. Instruction: apple. Edited Description: I want to eat sliced apple pizza with cheese."
         f"Image Content: {image_caption}"
         f"Instruction: {query_text}"
@@ -220,7 +220,8 @@ def index_view(request):
     query = request.POST.get("q", "").strip()  # 使用 POST 方法取得 query
     method = request.POST.get("method", "1")  # 1: Text, 2: Image, 3: Text & Image, 4: SBERT, 5: LLM + BLIP
 
-    # 讀取 index.txt 檔案，將其轉為字典
+    # Initialize IMAGE_FOLDER with a default value or raise an error if required.
+    IMAGE_FOLDER = os.path.join(XML_FOLDER, "image")  # Default value
     index_file = os.path.join(XML_FOLDER, "index.txt")
     recipe_names = {}
     with open(index_file, "r", encoding="utf-8") as f:
@@ -239,10 +240,10 @@ def index_view(request):
             model.eval() 
             model = torch.nn.Sequential(*list(model.children())[:-1])
         else: 
-            # 應用延遲加載模型
             model, processor = get_model_and_processor()
-            # 預處理圖片嵌入特徵，只在需要的時候加載圖片
-            image_embeddings, image_paths = preprocess_images(IMAGE_FOLDER, model, processor)
+
+            # Ensure IMAGE_FOLDER is defined for preprocess_images
+            image_embeddings, image_paths = preprocess_images(os.path.join(XML_FOLDER, "image"), model, processor)
 
         if method == "1" and query:  # Text
             text_features = get_text_features(query, model, processor)
@@ -259,8 +260,8 @@ def index_view(request):
             image_features = get_image_features(image, model, processor)
             fused_features = fuse_features(text_features, image_features)
             matched_results = match_features_to_images(fused_features, image_embeddings, image_paths)
-        elif method == '4' and query: # SBERT (Recipe)
-            matched_results = get_topk_results(method,query, model, 10)
+        elif method == '4' and query:  # SBERT (Recipe)
+            matched_results = get_topk_results(method, query, model, 10)
         elif method == "5" and query and "image" in request.FILES:  # LLM + BLIP + CLIP
             uploaded_image = request.FILES["image"]
             image_caption = generate_caption(uploaded_image)
@@ -270,12 +271,12 @@ def index_view(request):
             print(f"Refined Query: {refined_query}")
             text_features = get_text_features(refined_query, model, processor)
             matched_results = match_features_to_images(text_features, image_embeddings, image_paths)
-        elif method == '6' and query: # SBERT (Ingredients)
-            matched_results = get_topk_results(method,query, model, 10)
-        elif method == '7' and "image" in request.FILES: # Resnet (Ingredients)
+        elif method == '6' and query:  # SBERT (Ingredients)
+            matched_results = get_topk_results(method, query, model, 10)
+        elif method == '7' and "image" in request.FILES:  # Resnet (Ingredients)
             uploaded_image = request.FILES["image"]
             image = Image.open(uploaded_image).convert("RGB")
-            matched_results = get_topk_results(method,image, model, 10)
+            matched_results = get_topk_results(method, image, model, 10)
         else:
             matched_results = []
 
@@ -285,8 +286,6 @@ def index_view(request):
             if method == '6' or method == '7': 
                 recipe_name = image_name[:-4]
                 IMAGE_FOLDER = os.path.join(XML_FOLDER, "Ingredients")
-            print(recipe_name)
-            print(IMAGE_FOLDER)
             recipe_file = os.path.join(RECIPE_FOLDER, f"{recipe_id}.txt")
 
             if os.path.exists(recipe_file):
