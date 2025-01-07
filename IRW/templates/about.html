@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    {% load static %}
+    <link rel="icon" href="{% static 'img/logo.jpg' %}" type="image/x-icon" />
+    <title>About</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+      rel="stylesheet"
+    />
+</head>
+<style>
+    body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    }
+
+    h1 {
+        text-align: center;
+        color: #333;
+    }
+
+    table {
+        width: 80%;
+        margin: 20px auto;
+        border-collapse: collapse;
+    }
+
+    table th, table td {
+        padding: 10px;
+        text-align: center;
+    }
+
+    table th {
+        background-color: #f4f4f4;
+    }
+
+    table td {
+        background-color: #fff;
+    }
+</style>
+<body>
+    <header>
+        <div class="header-container">
+          <img src="{% static 'img/logo.jpg' %}" alt="logo" class="logo" />
+          <h1>Information Retrieval System</h1>
+          <nav>
+            <ul>
+              <li><a href="{% url 'index_view' %}" onclick="removeQueryParameter()">Home</a></li>
+              <li><a href="https://docs.google.com/presentation/d/1lWF9Ic6GOgSXRiY6lhk0CKNBJX_bFt5VABbcq5moPTc/edit#slide=id.p1" onclick="removeQueryParameter()">Model Description</a></li>
+              <li><a href="{% url 'about_view' %}">About</a></li>
+            </ul>
+          </nav>
+        </div>
+      </header>
+
+    <h1 style="margin-top: 120px;">分工表</h1>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>姓名</th>
+                <th>分工內容</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>陳冠言</td>
+                <td>CLIP、LDRE-D、前後端製作</td>
+            </tr>
+            <tr>
+                <td>黃渝凌</td>
+                <td>Sentence Transformer、前後端製作</td>
+            </tr>
+            <tr>
+                <td>蔡依良</td>
+                <td>CLIP實驗、資料蒐集</td>
+            </tr>
+            <tr>
+                <td>薛惠馨</td>
+                <td>CLIP實驗、資料蒐集</td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>

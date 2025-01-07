@@ -116,7 +116,6 @@ def get_topk_results(method,query,model,k):
     name_to_index = {v: k for k, v in index_data.items()}  
     topk_with_indices = [(name_to_index[name] + '.jpg' if method == '4' else name + '.jpg', score)
                             for name, score in topk_sorted]
-    print(topk_with_indices[:k])
     return topk_with_indices[:k]
 
 def recipe_name_to_index(target):
@@ -389,4 +388,5 @@ def file_analysis_view(request, recipe_id):
         "recipe_image": recipe_image,  # Add the image to the context
     })
 
-
+def about_view(request):
+    return render(request, 'about.html')
