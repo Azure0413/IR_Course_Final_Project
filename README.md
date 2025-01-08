@@ -1,9 +1,13 @@
 # IR_Course_Final_Project
 
-### Reproduction
+## Reproduction
 #### Go here to download the [model file](https://drive.google.com/drive/folders/18O5LDo0gaXhbQolfhH320TDe5BeIiQtv) and put it in ./IRW/model
 
-### 介紹：
+## Figure
+![image](https://github.com/Azure0413/IR_Course_Final_Project/blob/main/main.png)
+![image](https://github.com/Azure0413/IR_Course_Final_Project/blob/main/search.png)
+
+## Introduction
 #### 本系統以西餐為主題，並包含了約400筆的食譜資料，主要功能包括以食材的文字搜尋菜色的圖片、以食材圖片搜尋相關菜色以及混合食材的文字和圖片找到混合兩者語意的對應菜色圖片，模型部分主要使用了Sentence Transformer, CLIP, BLIP等，系統可提供多種的搜尋方式並會由高到低排序最相關的食譜，每個食譜中也有顯示字元數、字數、句子數、ACSII、non-ACSII的統計數值。
 
 ### 功能：
